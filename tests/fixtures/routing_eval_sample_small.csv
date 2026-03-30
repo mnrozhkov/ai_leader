@@ -1,0 +1,5 @@
+Request Text,Submission Channel,Related to order,Order ID,Category,Routing to Department,Timestamp,Order History,[Human] Initial Response,Risks (yes/no)
+"I need to update my payment method.",Email,True,CK-1001,Payment,Customer Support,2025-10-01 10:00:00,"2025-09-20 — Order placed","Happy to help update your payment details.",No
+"My order arrived damaged.",Chat,True,CK-1002,Order Issue,Returns,2025-10-02 12:00:00,"2025-09-25 — Order shipped","Sorry about that, we can start a return.",No
+"The delivery window is too narrow.",Phone,True,CK-1003,Delivery,Logistics,2025-10-03 09:30:00,"2025-09-27 — Order scheduled","I can adjust the delivery schedule.",No
+"I love the new product line!",Email,False,,General Feedback,Product Team,2025-10-04 15:15:00,,"Thanks for the feedback!",No

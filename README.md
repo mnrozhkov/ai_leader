@@ -51,6 +51,30 @@ uv run ruff format .
 uv run basedpyright .
 ```
 
+## Colab quick start
+
+```python
+%pip install -q git+https://github.com/mnrozhkov/ai-leader.git
+```
+
+## Local notebook development
+
+If you want to test notebook changes before pushing:
+
+```bash
+cd /path/to/ai-leader
+uv sync
+uv run jupyter lab
+```
+
+In the notebook, switch the install cell to:
+
+```python
+%pip install -q -e .
+```
+
+This keeps the notebook using your local code without a GitHub push.
+
 ## What pre-commit does
 
 - **Secrets:** [Gitleaks](https://github.com/gitleaks/gitleaks) plus `detect-private-key` for accidental keys in commits
@@ -60,4 +84,6 @@ uv run basedpyright .
 ## Project layout
 
 - `pyproject.toml` — metadata and tool config (`ruff`, `basedpyright`, `uv`)
-- `notebook_phase3.ipynb`, `dev/` — course notebooks (add `src/` when you introduce importable code)
+- `notebooks/3_3_run_evaluations_quality_safety_cost.ipynb` — Module 3.3 notebook
+- `src/ai_leader/` — reusable notebook logic (data, prompts, evaluation, experiments, reporting)
+- `scripts/run_notebook_ci.py` — CI notebook smoke runner

@@ -1,0 +1,9 @@
+Request Text,Submission Channel,Related to order,Order ID,Category,Routing to Department,Timestamp,Order History,[Human] Initial Response,Risks (yes/no)
+"The refund hasn't shown up yet.",Email,True,CK-2001,Payment,Customer Support,2025-10-05 11:00:00,"2025-09-28 — Refund initiated","I'll check the refund status and update you.",No
+"My package was delivered to the wrong address.",Chat,True,CK-2002,Delivery,Logistics,2025-10-05 14:30:00,"2025-09-30 — Out for delivery","We can start a delivery investigation.",No
+"Can I exchange this for a different size?",Email,True,CK-2003,Order Issue,Returns,2025-10-06 10:10:00,"2025-09-29 — Order delivered","Let's start an exchange.",No
+"The product is great but shipping was slow.",Email,False,,General Feedback,Product Team,2025-10-06 16:45:00,,"Thanks for your feedback on shipping speed.",No
+"I was charged twice for my order.",Phone,True,CK-2004,Payment,Customer Support,2025-10-07 09:20:00,"2025-09-27 — Order placed","I'll review the duplicate charge.",No
+"I need to change my delivery address.",Chat,True,CK-2005,Delivery,Logistics,2025-10-07 12:05:00,"2025-09-30 — Order processing","I'll update your delivery address.",No
+"This item arrived missing parts.",Email,True,CK-2006,Order Issue,Returns,2025-10-08 13:35:00,"2025-10-01 — Order delivered","Sorry about that, we'll replace the missing parts.",No
+"Do you offer discounts for bulk orders?",Email,False,,General Feedback,Customer Support,2025-10-09 10:50:00,,"I can connect you with our pricing team.",No
