@@ -59,8 +59,8 @@ uv run basedpyright .
 
 Open notebooks directly in Colab:
 
-- [Notebook A](https://colab.research.google.com/github/mnrozhkov/ai-leader/blob/main/notebooks/notebook_a.ipynb)
-- [Notebook B](https://colab.research.google.com/github/mnrozhkov/ai-leader/blob/main/notebooks/notebook_b.ipynb)
+- [Notebook A](https://colab.research.google.com/github/mnrozhkov/ai_leader/blob/main/notebooks/notebook_a.ipynb)
+- [Notebook B](https://colab.research.google.com/github/mnrozhkov/ai_leader/blob/main/notebooks/notebook_b.ipynb)
 
 ## Local notebook development
 
