@@ -57,6 +57,11 @@ uv run basedpyright .
 %pip install -q git+https://github.com/mnrozhkov/ai-leader.git
 ```
 
+Open notebooks directly in Colab:
+
+- [Notebook A](https://colab.research.google.com/github/mnrozhkov/ai-leader/blob/main/notebooks/notebook_a.ipynb)
+- [Notebook B](https://colab.research.google.com/github/mnrozhkov/ai-leader/blob/main/notebooks/notebook_b.ipynb)
+
 ## Local notebook development
 
 If you want to test notebook changes before pushing:

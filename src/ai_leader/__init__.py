@@ -10,6 +10,7 @@ from .config import (
     MODELS,
 )
 from .data import load_and_validate_dataset
+from .decision import DecisionSummary, Thresholds, evaluate_decision
 from .evaluation import (
     compute_confidence_policy_metrics,
     compute_cost,
@@ -18,9 +19,12 @@ from .evaluation import (
     compute_latency_summary,
     compute_misroute_rate,
     compute_quality_metrics,
+    compute_safety_metrics,
+    estimate_cost_per_message,
 )
 from .experiments import (
     build_comparison_table,
+    build_model_comparison_dataframe,
     create_client,
     evaluate_model_on_dataframe,
     evaluate_model_on_dataframe_async,
@@ -28,8 +32,29 @@ from .experiments import (
     run_model_comparison_async,
     select_best_model,
 )
-from .prompts import DEFAULT_SYSTEM_PROMPT, build_user_prompt
-from .reporting import display_evaluation_results
+from .prompts import (
+    DEFAULT_SYSTEM_PROMPT,
+    IMPROVED_SYSTEM_PROMPT,
+    build_user_prompt,
+    generate_prompt_from_mistakes,
+    prepare_mistake_examples,
+)
+from .reporting import (
+    department_mistakes_table,
+    display_cost_breakdown,
+    display_cost_metrics,
+    display_cost_projection,
+    display_evaluation_results,
+    display_evaluation_with_department_mistakes,
+    display_latency_metrics,
+    display_mvp_decision,
+    display_prediction_confidence_chart,
+    display_quality_metrics,
+    display_run_comparison_table,
+    display_safety_metrics,
+    save_figure,
+    show_figure,
+)
 
 __all__ = [
     "CATEGORY_VALUES",
@@ -39,9 +64,15 @@ __all__ = [
     "MODEL_REGISTRY",
     "MODELS",
     "DEFAULT_SYSTEM_PROMPT",
+    "DecisionSummary",
     "FakeClient",
+    "IMPROVED_SYSTEM_PROMPT",
+    "Thresholds",
     "build_comparison_table",
+    "build_model_comparison_dataframe",
     "build_user_prompt",
+    "generate_prompt_from_mistakes",
+    "prepare_mistake_examples",
     "compute_confidence_policy_metrics",
     "compute_cost",
     "compute_cost_projection",
@@ -49,14 +80,30 @@ __all__ = [
     "compute_latency_summary",
     "compute_misroute_rate",
     "compute_quality_metrics",
+    "compute_safety_metrics",
+    "department_mistakes_table",
     "create_client",
     "create_token_factory_client",
+    "display_cost_metrics",
+    "display_cost_breakdown",
+    "display_run_comparison_table",
+    "display_cost_projection",
     "display_evaluation_results",
+    "display_evaluation_with_department_mistakes",
+    "display_latency_metrics",
+    "display_mvp_decision",
+    "display_prediction_confidence_chart",
+    "display_quality_metrics",
+    "display_safety_metrics",
+    "estimate_cost_per_message",
+    "evaluate_decision",
     "evaluate_model_on_dataframe",
     "evaluate_model_on_dataframe_async",
     "load_and_validate_dataset",
     "run_extraction_async",
     "run_model_comparison",
     "run_model_comparison_async",
+    "save_figure",
+    "show_figure",
     "select_best_model",
 ]

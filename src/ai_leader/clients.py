@@ -4,23 +4,28 @@ from __future__ import annotations
 
 import asyncio
 import json
+import logging
 import re
 import time
 from dataclasses import dataclass
 from typing import Any
 
 import pandas as pd
-from openai import AsyncOpenAI
+from openai import APIError, AsyncOpenAI
 
 from .prompts import build_user_prompt
 from .schemas import RESPONSE_SCHEMA, SupportTicketExtraction
+
+log = logging.getLogger(__name__)
+
+_DEFAULT_TIMEOUT_SECONDS = 30.0
 
 
 def create_token_factory_client(
     api_key: str,
     *,
     base_url: str | None = None,
-    timeout_seconds: float = 30.0,
+    timeout_seconds: float = _DEFAULT_TIMEOUT_SECONDS,
 ) -> AsyncOpenAI:
     return AsyncOpenAI(api_key=api_key, base_url=base_url, timeout=timeout_seconds)
 
@@ -113,12 +118,39 @@ async def extract_row(
         last_error: Exception | None = None
         for attempt in range(1, max_retries + 1):
             try:
-                return await _call()
+                return await asyncio.wait_for(
+                    _call(),
+                    timeout=_DEFAULT_TIMEOUT_SECONDS,
+                )
+            except TimeoutError:
+                log.warning(
+                    "Row %s skipped — TimeoutError after %.0fs",
+                    row.get("row_id", "?"),
+                    _DEFAULT_TIMEOUT_SECONDS,
+                )
+                raise
+            except APIError as exc:
+                log.warning(
+                    "Row %s skipped — %s: %s",
+                    row.get("row_id", "?"),
+                    type(exc).__name__,
+                    exc,
+                )
+                raise
             except (ValueError, json.JSONDecodeError) as exc:
                 last_error = exc
                 if attempt == max_retries:
                     raise
-                await asyncio.sleep(2**attempt)
+                delay = 2**attempt
+                log.warning(
+                    "Row %s attempt %d/%d failed (%s), retrying in %ds",
+                    row.get("row_id", "?"),
+                    attempt,
+                    max_retries,
+                    type(exc).__name__,
+                    delay,
+                )
+                await asyncio.sleep(delay)
         raise RuntimeError("Unreachable retry state") from last_error
 
     if semaphore is None:
@@ -145,29 +177,47 @@ async def run_extraction_async(
     total_usage = {"prompt_tokens": 0, "completion_tokens": 0}
     latency_ms: list[float] = []
 
-    async def _one(i: int, row: dict[str, Any]):
-        result, usage, latency = await extract_row(
-            row=row,
-            few_shot_examples=few_shot_examples,
-            model=model,
-            semaphore=sem,
-            system_prompt=system_prompt,
-            temperature=temperature,
-            client=client,
-        )
-        return i, result, usage, latency
+    async def _one(
+        i: int,
+        row: dict[str, Any],
+    ) -> tuple[int, dict[str, Any] | None, dict[str, int], float]:
+        try:
+            result, usage, latency = await extract_row(
+                row=row,
+                few_shot_examples=few_shot_examples,
+                model=model,
+                semaphore=sem,
+                system_prompt=system_prompt,
+                temperature=temperature,
+                client=client,
+            )
+            return i, result, usage, latency
+        except Exception as exc:
+            log.error(
+                "Row %s failed after retries (%s: %s) — skipping",
+                row.get("row_id", i),
+                type(exc).__name__,
+                exc,
+            )
+            return i, None, {"prompt_tokens": 0, "completion_tokens": 0}, 0.0
 
     tasks = [asyncio.create_task(_one(i, r)) for i, r in enumerate(rows)]
     results: list[dict[str, Any] | None] = [None] * len(rows)
+    failed = 0
 
     for future in asyncio.as_completed(tasks):
         i, result, usage, latency = await future
         results[i] = result
+        if result is None:
+            failed += 1
         total_usage["prompt_tokens"] += usage["prompt_tokens"]
         total_usage["completion_tokens"] += usage["completion_tokens"]
         latency_ms.append(latency)
         if progress_bar is not None:
             progress_bar.update(1)
+
+    if failed:
+        log.warning("Skipped %d / %d rows due to errors", failed, len(rows))
 
     return pd.DataFrame([r for r in results if r is not None]), total_usage, latency_ms
 

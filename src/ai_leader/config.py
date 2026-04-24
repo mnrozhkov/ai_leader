@@ -6,11 +6,35 @@ from pydantic import BaseModel, Field
 
 from .prompts import DEFAULT_SYSTEM_PROMPT
 
-MODEL_REGISTRY: dict[str, dict[str, float]] = {
-    "deepseek-ai/DeepSeek-V3.2": {"input": 0.30, "output": 0.45},
-    "zai-org/GLM-5": {"input": 1.00, "output": 3.20},
-    "openai/gpt-oss-120b": {"input": 0.15, "output": 0.60},
+TOKENFACTORY_BASE_URL = "https://api.tokenfactory.nebius.com/v1/"
+TOKENFACTORY_US_CENTRAL1_URL = "https://api.tokenfactory.us-central1.nebius.com/v1/"
+
+MODEL_REGISTRY: dict[str, dict[str, float | str]] = {
+    "deepseek-ai/DeepSeek-V3.2": {
+        "input": 0.30,
+        "output": 0.45,
+        "base_url": TOKENFACTORY_US_CENTRAL1_URL,
+    },
+    "zai-org/GLM-5": {
+        "input": 1.00,
+        "output": 3.20,
+        "base_url": TOKENFACTORY_US_CENTRAL1_URL,
+    },
+    "openai/gpt-oss-120b": {
+        "input": 0.15,
+        "output": 0.60,
+        "base_url": TOKENFACTORY_BASE_URL,
+    },
 }
+
+
+def get_base_url(model: str) -> str:
+    """Return the base URL for a model, falling back to the default."""
+    entry = MODEL_REGISTRY.get(model)
+    if entry and "base_url" in entry:
+        return str(entry["base_url"])
+    return TOKENFACTORY_BASE_URL
+
 
 MODELS: list[str] = list(MODEL_REGISTRY)
 
@@ -36,7 +60,7 @@ MODEL_PALETTE: dict[str, str] = {
 
 H2_MISROUTE_MAX: float = 0.10
 DEFAULT_MONTHLY_MESSAGES: int = 20_000
-DEFAULT_MAX_CONCURRENCY: int = 6
+DEFAULT_MAX_CONCURRENCY: int = 10
 DEFAULT_TEMPERATURE: float = 0.2
 
 

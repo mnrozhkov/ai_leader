@@ -61,14 +61,17 @@ class ConfidencePolicyMetrics(BaseModel):
 
 class CostProjection(BaseModel):
     cost_per_message_usd: float
+    avg_prompt_tokens: float
+    avg_completion_tokens: float
     monthly_cost_usd: float
     annual_cost_usd: float
-    cost_per_exact_match_usd: float | None
+    cost_per_correct_route_usd: float | None
 
 
 class LatencySummary(BaseModel):
     median_latency_ms: float
     p95_latency_ms: float
+    mean_latency_ms: float
 
 
 RESPONSE_SCHEMA = {
