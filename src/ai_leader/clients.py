@@ -11,7 +11,7 @@ from dataclasses import dataclass
 from typing import Any
 
 import pandas as pd
-from openai import APIError, AsyncOpenAI
+from openai import APIError, APIStatusError, AsyncOpenAI
 
 from .prompts import build_user_prompt
 from .schemas import RESPONSE_SCHEMA, SupportTicketExtraction
@@ -19,6 +19,31 @@ from .schemas import RESPONSE_SCHEMA, SupportTicketExtraction
 log = logging.getLogger(__name__)
 
 _DEFAULT_TIMEOUT_SECONDS = 30.0
+
+
+def _is_transient_token_factory_error(exc: APIError) -> bool:
+    """Retry when the gateway may recover (auth flake, rate limit, overload, 5xx).
+
+    Includes non-standard overload codes such as **529** (treated like 5xx here).
+    """
+    return isinstance(exc, APIStatusError) and (
+        exc.status_code in (401, 429) or exc.status_code >= 500
+    )
+
+
+def _api_error_log_message(exc: APIError) -> str:
+    """Single-line text so notebook progress + logs do not break mid-message."""
+    if isinstance(exc, APIStatusError):
+        msg = exc.message.replace("\n", " ").strip()
+        return f"HTTP {exc.status_code} — {msg}"[:200]
+    return str(exc).replace("\n", " ").strip()[:200]
+
+
+def _transient_retry_delay_seconds(attempt: int, exc: APIError) -> float:
+    """Backoff: overload / rate-limit errors wait a bit longer before retry."""
+    if isinstance(exc, APIStatusError) and exc.status_code in (429, 529, 503, 502):
+        return float(min(4 * (2 ** (attempt - 1)), 60))
+    return float(min(2**attempt, 20))
 
 
 def create_token_factory_client(
@@ -82,7 +107,7 @@ async def extract_row(
     system_prompt: str,
     temperature: float,
     client: AsyncOpenAI | FakeClient,
-    max_retries: int = 3,
+    max_retries: int = 5,
 ) -> tuple[dict[str, Any], dict[str, int], float]:
     user_prompt = build_user_prompt(
         request_text=row["Request Text"],
@@ -130,6 +155,18 @@ async def extract_row(
                 )
                 raise
             except APIError as exc:
+                if _is_transient_token_factory_error(exc) and attempt < max_retries:
+                    delay = _transient_retry_delay_seconds(attempt, exc)
+                    log.warning(
+                        "Row %s attempt %d/%d — %s (retrying in %.0fs)",
+                        row.get("row_id", "?"),
+                        attempt,
+                        max_retries,
+                        _api_error_log_message(exc),
+                        delay,
+                    )
+                    await asyncio.sleep(delay)
+                    continue
                 log.warning(
                     "Row %s skipped — %s: %s",
                     row.get("row_id", "?"),

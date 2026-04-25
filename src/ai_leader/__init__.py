@@ -1,5 +1,6 @@
 """AI Leader course helper package."""
 
+from .annotation import analyze_high_confident_errors, recommend_new_labels
 from .clients import FakeClient, create_token_factory_client, run_extraction_async
 from .config import (
     CATEGORY_VALUES,
@@ -9,7 +10,7 @@ from .config import (
     MODEL_REGISTRY,
     MODELS,
 )
-from .data import load_and_validate_dataset
+from .data import apply_revised_labels, load_and_validate_dataset
 from .decision import DecisionSummary, Thresholds, evaluate_decision
 from .evaluation import (
     compute_confidence_policy_metrics,
@@ -46,12 +47,15 @@ from .reporting import (
     display_cost_projection,
     display_evaluation_results,
     display_evaluation_with_department_mistakes,
+    display_high_confidence_department_errors,
+    display_high_confident_errors,
     display_latency_metrics,
     display_mvp_decision,
     display_prediction_confidence_chart,
     display_quality_metrics,
     display_run_comparison_table,
     display_safety_metrics,
+    get_high_confident_errors,
     save_figure,
     show_figure,
 )
@@ -68,11 +72,13 @@ __all__ = [
     "FakeClient",
     "IMPROVED_SYSTEM_PROMPT",
     "Thresholds",
+    "analyze_high_confident_errors",
     "build_comparison_table",
     "build_model_comparison_dataframe",
     "build_user_prompt",
     "generate_prompt_from_mistakes",
     "prepare_mistake_examples",
+    "recommend_new_labels",
     "compute_confidence_policy_metrics",
     "compute_cost",
     "compute_cost_projection",
@@ -90,15 +96,19 @@ __all__ = [
     "display_cost_projection",
     "display_evaluation_results",
     "display_evaluation_with_department_mistakes",
+    "display_high_confident_errors",
+    "display_high_confidence_department_errors",
     "display_latency_metrics",
     "display_mvp_decision",
     "display_prediction_confidence_chart",
     "display_quality_metrics",
     "display_safety_metrics",
+    "get_high_confident_errors",
     "estimate_cost_per_message",
     "evaluate_decision",
     "evaluate_model_on_dataframe",
     "evaluate_model_on_dataframe_async",
+    "apply_revised_labels",
     "load_and_validate_dataset",
     "run_extraction_async",
     "run_model_comparison",

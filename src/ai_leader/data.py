@@ -1,6 +1,8 @@
-"""Dataset loading and validation."""
+"""Dataset loading, validation, and label revision helpers."""
 
 from __future__ import annotations
+
+from collections.abc import Mapping, Sequence
 
 import pandas as pd
 
@@ -77,3 +79,49 @@ def load_and_validate_dataset(path_or_url: str) -> pd.DataFrame:
         df = df.reset_index(drop=True).copy()
         df["row_id"] = df.index
     return df
+
+
+def apply_revised_labels(
+    df: pd.DataFrame,
+    revised_labels: Sequence[Mapping[str, object]],
+) -> pd.DataFrame:
+    """Return a copy of *df* with label updates applied by ``row_id``.
+
+    Expected revision item format:
+    ``{"row_id": int, "new_category": str?, "new_department": str?}``
+
+    Notes:
+    - Missing/invalid ``row_id`` values are ignored.
+    - Only provided non-empty ``new_*`` fields are applied.
+    - Accepts common typo key ``new_deparment`` as fallback.
+    """
+    updated = df.copy()
+    if "row_id" not in updated.columns:
+        raise ValueError("DataFrame must contain a 'row_id' column.")
+
+    for item in revised_labels:
+        row_id_raw = item.get("row_id")
+        if row_id_raw is None:
+            continue
+        try:
+            row_id = int(row_id_raw)
+        except (TypeError, ValueError):
+            continue
+
+        row_mask = updated["row_id"] == row_id
+        if not bool(row_mask.any()):
+            continue
+
+        new_category_raw = item.get("new_category")
+        if new_category_raw is not None:
+            new_category = str(new_category_raw).strip()
+            if new_category:
+                updated.loc[row_mask, "Category"] = new_category
+
+        new_department_raw = item.get("new_department", item.get("new_deparment"))
+        if new_department_raw is not None:
+            new_department = str(new_department_raw).strip()
+            if new_department:
+                updated.loc[row_mask, "Routing to Department"] = new_department
+
+    return updated

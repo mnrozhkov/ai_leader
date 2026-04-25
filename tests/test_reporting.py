@@ -32,8 +32,21 @@ def test_quality_metrics_summary_table() -> None:
             "row_count": 42,
         },
     )
-    assert df.shape == (1, 4)
-    assert float(df["Misroute rate"].iloc[0]) == 0.1
+    assert df.shape == (1, 3)
+    assert "Misroute rate" not in df.columns
+
+    full_df = quality_metrics_summary_table(
+        {
+            "misroute_rate": 0.1,
+            "department_accuracy": 0.9,
+            "category_accuracy": 0.85,
+            "row_count": 42,
+        },
+        show_all=True,
+    )
+    assert full_df.shape == (1, 4)
+    assert "Misroute rate" in full_df.columns
+    assert float(full_df["Misroute rate"].iloc[0]) == 0.1
 
 
 def test_mvp_decision_summary_table() -> None:

@@ -54,6 +54,7 @@ def _minimal_run(
             "category_accuracy": 0.0,
             "exact_route_match_rate": 0.0,
         },
+        safety_metrics={},
         confidence_metrics={},
         cost_metrics={"cost_per_message_usd": cost, "cost_source": "unknown"},
         latency_metrics={"median_latency_ms": median_ms, "p95_latency_ms": median_ms},
@@ -86,10 +87,14 @@ def test_build_model_comparison_dataframe_includes_safety_columns() -> None:
         client=FakeClient(),
         use_progress=False,
     )
-    table = build_model_comparison_dataframe(df, results)
-    assert "unsafe_auto_route_rate" in table.columns
-    assert "auto_route_coverage" in table.columns
-    assert len(table) == 1
+    compact = build_model_comparison_dataframe(df, results)
+    assert "unsafe_auto_route_rate" in compact.columns
+    assert "auto_route_coverage" not in compact.columns
+
+    full = build_model_comparison_dataframe(df, results, show_all=True)
+    assert "unsafe_auto_route_rate" in full.columns
+    assert "auto_route_coverage" in full.columns
+    assert len(full) == 1
 
 
 def test_select_best_model_tiebreak_department_accuracy() -> None:

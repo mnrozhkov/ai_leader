@@ -30,7 +30,7 @@ def run_routing_eval(
     base_url: str | None = None,
     temperature: float = 0.2,
 ) -> None:
-    api_key = api_key or os.getenv("TOKENFACTORY_API_KEY") or os.getenv("OPENAI_API_KEY")
+    api_key = api_key or os.getenv("NEBIUS_API_KEY") or os.getenv("OPENAI_API_KEY")
     client = create_client(api_key, mode="TOKEN_FACTORY", base_url=base_url)
     df = load_and_validate_dataset(str(path))
     results = run_model_comparison(

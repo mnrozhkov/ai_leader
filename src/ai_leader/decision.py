@@ -8,7 +8,7 @@ from typing import Literal
 DecisionStatus = Literal["pass", "fail", "unknown"]
 
 
-@dataclass(frozen=True, slots=True)
+@dataclass(frozen=True)
 class Thresholds:
     """Pass thresholds for default hypothesis-validation metrics."""
 
@@ -45,7 +45,7 @@ def _to_float(value: object, *, default: float) -> float:
         return default
 
 
-@dataclass(frozen=True, slots=True)
+@dataclass(frozen=True)
 class DimensionResult:
     name: str
     status: DecisionStatus
@@ -53,7 +53,7 @@ class DimensionResult:
     threshold_pass: float
 
 
-@dataclass(frozen=True, slots=True)
+@dataclass(frozen=True)
 class DecisionSummary:
     dimensions: list[DimensionResult] = field(default_factory=list)
     recommendation: str = ""
@@ -74,12 +74,13 @@ class DecisionSummary:
 
 
 def evaluate_decision(
+    run: object | None = None,
     *,
-    quality_metrics: dict[str, object],
-    safety_metrics: dict[str, float],
-    cost_metrics: dict[str, float | None | str],
-    latency_metrics: dict[str, float | None | str],
     thresholds: Thresholds | None = None,
+    quality_metrics: dict[str, object] | None = None,
+    safety_metrics: dict[str, float] | None = None,
+    cost_metrics: dict[str, float | None | str] | None = None,
+    latency_metrics: dict[str, float | None | str] | None = None,
 ) -> DecisionSummary:
     """Evaluate default notebook metrics and produce a recommendation.
 
@@ -88,9 +89,37 @@ def evaluate_decision(
     """
     t = thresholds or Thresholds()
 
+    def _safe_get_dict_metric(
+        source: object,
+        field_name: str,
+        fallback: dict[str, object] | dict[str, float] | dict[str, float | None | str] | None,
+    ) -> dict[str, object] | dict[str, float] | dict[str, float | None | str] | None:
+        if isinstance(source, dict):
+            value = source.get(field_name, fallback)
+            return value if isinstance(value, dict) else fallback
+        try:
+            value = getattr(source, field_name)
+        except Exception:
+            return fallback
+        return value if isinstance(value, dict) else fallback
+
+    if run is not None:
+        quality_metrics = _safe_get_dict_metric(run, "quality_metrics", quality_metrics)
+        safety_metrics = _safe_get_dict_metric(run, "safety_metrics", safety_metrics)
+        cost_metrics = _safe_get_dict_metric(run, "cost_metrics", cost_metrics)
+        latency_metrics = _safe_get_dict_metric(run, "latency_metrics", latency_metrics)
+
+    missing_metrics = quality_metrics is None or cost_metrics is None or latency_metrics is None
+    if missing_metrics:
+        raise ValueError(
+            "evaluate_decision requires either a run object "
+            "(with quality/safety/cost/latency metrics) or all metric dictionaries."
+        )
+
     dept_acc = _to_float(quality_metrics.get("department_accuracy"), default=0.0)
     cat_acc = _to_float(quality_metrics.get("category_accuracy"), default=0.0)
-    unsafe = float(safety_metrics.get("unsafe_auto_route_rate", 1.0))
+    safety_known = safety_metrics is not None
+    unsafe = float(safety_metrics.get("unsafe_auto_route_rate", 0.0)) if safety_known else 0.0
     raw_monthly_cost = cost_metrics.get("monthly_cost_usd")
     monthly_cost_known = raw_monthly_cost is not None
     monthly_cost = float(raw_monthly_cost) if monthly_cost_known else 0.0
@@ -120,7 +149,9 @@ def evaluate_decision(
         ),
         DimensionResult(
             name="unsafe_auto_route_rate",
-            status=_classify(unsafe, t.unsafe_auto_route_rate_pass),
+            status=(
+                _classify(unsafe, t.unsafe_auto_route_rate_pass) if safety_known else "unknown"
+            ),
             value=unsafe,
             threshold_pass=t.unsafe_auto_route_rate_pass,
         ),

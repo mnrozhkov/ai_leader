@@ -190,7 +190,8 @@ def department_mistakes_table(
     max_rows: int = 10,
 ) -> pd.DataFrame:
     """Return top department routing mistakes for diagnostics."""
-    mistakes = eval_df[["Request Text", "Routing to Department"]].copy()
+    target_department_col = "Routing to Department"
+    mistakes = eval_df[["Request Text", target_department_col]].copy()
     pred_department_col = _first_existing_column(
         predictions.columns.tolist(),
         [
@@ -210,10 +211,15 @@ def department_mistakes_table(
     mistakes["predicted_department"] = (
         predictions[pred_department_col].reindex(mistakes.index).astype(str)
     )
-    return mistakes[
-        mistakes["Routing to Department"].astype(str)
-        != mistakes["predicted_department"].astype(str)
+    out = mistakes[
+        mistakes[target_department_col].astype(str) != mistakes["predicted_department"].astype(str)
     ].head(max_rows)
+    return out.rename(
+        columns={
+            target_department_col: "Department",
+            "predicted_department": "Predicted Department",
+        }
+    )
 
 
 def display_evaluation_with_department_mistakes(
@@ -227,6 +233,93 @@ def display_evaluation_with_department_mistakes(
     return department_mistakes_table(
         eval_df=eval_df,
         predictions=eval_results.predictions.copy(),
+        max_rows=max_rows,
+    )
+
+
+def get_high_confident_errors(
+    *,
+    eval_df: pd.DataFrame,
+    predictions: pd.DataFrame,
+) -> pd.DataFrame:
+    """Return high-confidence department routing errors.
+
+    Filters predictions where ``Confidence == "High"`` and keeps rows where
+    predicted department differs from reference department.
+    """
+    joined = eval_df.merge(predictions, on="row_id", how="inner")
+
+    if "Confidence" not in joined.columns:
+        return pd.DataFrame(
+            columns=[
+                "row_id",
+                "Request Text",
+                "Category",
+                "Department",
+                "Predicted Category",
+                "Predicted Department",
+                "Confidence",
+            ]
+        )
+
+    high_conf_mask = joined["Confidence"] == "High"
+    errors = joined.loc[
+        high_conf_mask
+        & (joined["Routing to Department"] != joined["[Agent] Routing to Department"])
+    ].copy()
+
+    display_df = errors.rename(
+        columns={
+            "Routing to Department": "Department",
+            "category": "Predicted Category",
+            "[Agent] Routing to Department": "Predicted Department",
+        }
+    )
+    cols = [
+        "row_id",
+        "Request Text",
+        "Category",
+        "Department",
+        "Predicted Category",
+        "Predicted Department",
+        "Confidence",
+    ]
+    present_cols = [c for c in cols if c in display_df.columns]
+    return display_df[present_cols].copy()
+
+
+def display_high_confident_errors(
+    *,
+    eval_df: pd.DataFrame,
+    predictions: pd.DataFrame,
+    max_rows: int = 10,
+) -> pd.DataFrame:
+    """Display high-confidence department routing errors and return shown rows."""
+    from IPython.display import display
+
+    joined = eval_df.merge(predictions, on="row_id", how="inner")
+    errors = get_high_confident_errors(eval_df=eval_df, predictions=predictions)
+    high_conf_total = int((joined["Confidence"] == "High").sum()) if "Confidence" in joined else 0
+    shown = errors.head(max_rows).copy()
+
+    error_rate = len(errors) / max(1, high_conf_total)
+    print(f"High-confidence department errors: {len(errors)}")
+    print(f"Error rate within High-confidence predictions: {error_rate:.1%}")
+    print("Reminder: some rows may indicate labeling ambiguity/data issues, not only model issues.")
+    display(shown)
+    return shown
+
+
+def display_high_confidence_department_errors(
+    *,
+    eval_df: pd.DataFrame,
+    predictions: pd.DataFrame,
+    max_rows: int = 10,
+) -> pd.DataFrame:
+    """Backward-compatible alias for previous helper name."""
+    return display_high_confident_errors(
+        eval_df=eval_df,
+        predictions=predictions,
         max_rows=max_rows,
     )
 
@@ -760,23 +853,28 @@ def show_figure(fig: plt.Figure) -> None:
     plt.close(fig)
 
 
-def quality_metrics_summary_table(quality_metrics: dict[str, Any]) -> pd.DataFrame:
-    return pd.DataFrame(
-        [
-            {
-                "Misroute rate": _display_round(quality_metrics["misroute_rate"]),
-                "Department accuracy": _display_round(quality_metrics["department_accuracy"]),
-                "Category accuracy": _display_round(quality_metrics["category_accuracy"]),
-                "Rows evaluated": _display_round(quality_metrics.get("row_count", 0)),
-            },
-        ],
-    )
+def quality_metrics_summary_table(
+    quality_metrics: dict[str, Any],
+    *,
+    show_all: bool = False,
+) -> pd.DataFrame:
+    row: dict[str, Any] = {
+        "Department accuracy": _display_round(quality_metrics["department_accuracy"]),
+        "Category accuracy": _display_round(quality_metrics["category_accuracy"]),
+        "Rows evaluated": _display_round(quality_metrics.get("row_count", 0)),
+    }
+    if show_all:
+        row = {
+            "Misroute rate": _display_round(quality_metrics["misroute_rate"]),
+            **row,
+        }
+    return pd.DataFrame([row])
 
 
-def display_quality_metrics(*, quality_metrics: dict[str, Any]) -> None:
+def display_quality_metrics(*, quality_metrics: dict[str, Any], show_all: bool = False) -> None:
     from IPython.display import display
 
-    display(quality_metrics_summary_table(quality_metrics))
+    display(quality_metrics_summary_table(quality_metrics, show_all=show_all))
 
 
 def safety_metrics_summary_table(safety_metrics: dict[str, float]) -> pd.DataFrame:
@@ -799,13 +897,14 @@ def display_safety_metrics(*, safety_metrics: dict[str, float]) -> None:
 
 
 def cost_metrics_summary_table(cost_metrics: dict[str, Any]) -> pd.DataFrame:
+    cost_per_message = cost_metrics.get("cost_per_message_usd")
+    cost_per_1k = None if cost_per_message is None else float(cost_per_message) * 1000.0
     return pd.DataFrame(
         [
             {
-                "Cost per message (USD)": _display_round(cost_metrics.get("cost_per_message_usd")),
+                "Cost per 1,000 messages (USD)": _display_round(cost_per_1k),
                 "Monthly cost (USD)": _display_round(cost_metrics.get("monthly_cost_usd")),
                 "Annual cost (USD)": _display_round(cost_metrics.get("annual_cost_usd")),
-                "Cost source": cost_metrics.get("cost_source"),
             },
         ],
     )
@@ -924,21 +1023,8 @@ def display_cost_projection(
     cost_metrics: dict[str, Any],
     monthly_messages: int,
 ) -> None:
-    from IPython.display import Markdown, display
+    from IPython.display import display
 
-    display(
-        Markdown(
-            """
-**Formulas used**
-
-- `input_cost_per_message = avg_input_tokens_per_message * input_price_per_1M / 1_000_000`
-- `output_cost_per_message = avg_output_tokens_per_message * output_price_per_1M / 1_000_000`
-- `cost_per_message = input_cost_per_message + output_cost_per_message`
-- `monthly_cost = cost_per_message * monthly_messages`
-- `annual_cost = monthly_cost * 12`
-"""
-        )
-    )
     display(cost_projection_table(cost_metrics=cost_metrics, monthly_messages=monthly_messages))
     monthly_cost = float(cost_metrics.get("monthly_cost_usd") or 0.0)
     annual_cost = float(cost_metrics.get("annual_cost_usd") or 0.0)
@@ -994,7 +1080,6 @@ def mvp_decision_summary_table(decision: DecisionSummary) -> pd.DataFrame:
 
 
 def display_mvp_decision(*, decision: DecisionSummary) -> None:
-    from IPython.display import Markdown, display
+    from IPython.display import display
 
     display(mvp_decision_summary_table(decision))
-    display(Markdown(f"**Recommendation:** `{decision.recommendation}`"))

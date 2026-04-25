@@ -10,7 +10,7 @@ from dataclasses import dataclass
 from typing import Any, cast
 
 import pandas as pd
-from rich.progress import BarColumn, Progress, TaskProgressColumn, TextColumn, TimeRemainingColumn
+from tqdm.auto import tqdm
 
 from .clients import FakeClient, create_token_factory_client, run_extraction_async
 from .config import (
@@ -40,6 +40,7 @@ class ModelRun:
     usage: dict[str, int]
     latency_ms: list[float]
     quality_metrics: dict[str, object]
+    safety_metrics: dict[str, float]
     confidence_metrics: dict[str, float]
     cost_metrics: dict[str, float | None | str]
     latency_metrics: dict[str, float | None | str]
@@ -94,6 +95,12 @@ def _model_run_from_extraction(
             usage=usage,
             latency_ms=latency_ms,
             quality_metrics=zero_quality,
+            safety_metrics={
+                "auto_route_coverage": 0.0,
+                "auto_route_precision": 0.0,
+                "unsafe_auto_route_rate": 0.0,
+                "manual_review_rate": 1.0,
+            },
             confidence_metrics={
                 "high_confidence_coverage": 0.0,
                 "high_confidence_error_rate": 0.0,
@@ -104,6 +111,7 @@ def _model_run_from_extraction(
         )
 
     quality_metrics = compute_quality_metrics(df, predictions)
+    safety_metrics = compute_safety_metrics(df, predictions)
     confidence_metrics = compute_confidence_policy_metrics(df, predictions)
     if model in MODEL_REGISTRY:
         row_count = int(quality_metrics["row_count"])
@@ -136,37 +144,23 @@ def _model_run_from_extraction(
         usage=usage,
         latency_ms=latency_ms,
         quality_metrics=quality_metrics,
+        safety_metrics=safety_metrics,
         confidence_metrics=confidence_metrics,
         cost_metrics=cost_metrics,
         latency_metrics=latency_metrics,
     )
 
 
-class _RichProgressBar:
-    """Thin adapter so ``rich.progress`` satisfies the ``.update(n)`` protocol
-    used by ``run_extraction_async``."""
+def _make_progress_bar(desc: str, total: int) -> Any:
+    """``tqdm.auto`` bar (notebook-aware) with ``.update(n)`` / ``.close()`` for extraction."""
 
-    def __init__(self, progress: Progress, task_id) -> None:
-        self._progress = progress
-        self._task_id = task_id
-
-    def update(self, n: int = 1) -> None:
-        self._progress.update(self._task_id, advance=n)
-
-    def close(self) -> None:
-        self._progress.stop()
-
-
-def _make_progress_bar(desc: str, total: int) -> _RichProgressBar:
-    progress = Progress(
-        TextColumn("[bold blue]{task.description}"),
-        BarColumn(),
-        TaskProgressColumn(),
-        TimeRemainingColumn(),
+    return tqdm(
+        total=total,
+        desc=desc,
+        unit="row",
+        dynamic_ncols=True,
+        leave=True,
     )
-    task_id = progress.add_task(desc, total=total)
-    progress.start()
-    return _RichProgressBar(progress, task_id)
 
 
 async def evaluate_model_on_dataframe_async(
@@ -256,10 +250,10 @@ async def run_model_comparison_async(
 ) -> dict[str, ModelRun]:
     """Run evaluation across multiple models.
 
-    When *api_key* is provided (and *client* is None), a fresh client
-    is created per model so each hits the correct base URL from the
-    registry.  If a single *client* is passed it is reused for all
-    models (legacy / notebook path).
+    When *api_key* is provided (and *client* is None), a fresh client is created per model (separate
+    HTTP connection state); the base URL is still the same global Token Factory host unless you pass
+    a custom *client* or set ``TOKENFACTORY_BASE_URL``. If a single *client* is passed it is reused
+    for all models.
     """
     results: dict[str, ModelRun] = {}
     for model in models:
@@ -442,9 +436,8 @@ def create_client(
 ) -> Any:
     """Create an API client.
 
-    When *base_url* is not provided, the URL is resolved from *model*
-    (via ``MODEL_REGISTRY``) so that each model hits the correct
-    TokenFactory endpoint.
+    When *base_url* is not provided, uses ``TOKENFACTORY_BASE_URL`` from the environment if set,
+    otherwise ``get_base_url(model)`` (normally the global Token Factory host for all models).
     """
     if mode == "FAKE":
         return FakeClient()

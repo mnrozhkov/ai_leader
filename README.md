@@ -10,8 +10,8 @@ Course materials, notebooks, and exercises.
 ## Quick setup
 
 ```bash
-# Install Python and project dev tools into .venv
-uv sync
+# Install Python, runtime libs, and local dev tools (Jupyter, Ruff, pre-commit, etc.)
+uv sync --extra dev
 
 # Optional: pin the same Python as the repo
 uv python install 3.12
@@ -54,13 +54,15 @@ uv run basedpyright .
 ## Colab quick start
 
 ```python
-%pip install -q git+https://github.com/mnrozhkov/ai-leader.git
+%pip install -q git+https://github.com/mnrozhkov/ai_leader.git
 ```
+
+The default package dependencies are **runtime-only** (API, pandas, plotting, CLI) so Colab’s pinned `ipython` / `ipykernel` / `jupyter-*` stack is not upgraded. You may still see harmless pip warnings from other Colab preinstalls; the install should succeed.
 
 Open notebooks directly in Colab:
 
-- [Notebook A](https://colab.research.google.com/github/mnrozhkov/ai_leader/blob/main/notebooks/notebook_a.ipynb)
-- [Notebook B](https://colab.research.google.com/github/mnrozhkov/ai_leader/blob/main/notebooks/notebook_b.ipynb)
+- [Notebook A](https://colab.research.google.com/github/mnrozhkov/ai_leader/blob/colab/notebooks/notebook_a.ipynb)
+- [Notebook B](https://colab.research.google.com/github/mnrozhkov/ai_leader/blob/colab/notebooks/notebook_b.ipynb)
 
 ## Local notebook development
 
@@ -68,7 +70,7 @@ If you want to test notebook changes before pushing:
 
 ```bash
 cd /path/to/ai-leader
-uv sync
+uv sync --extra dev
 uv run jupyter lab
 ```
 
