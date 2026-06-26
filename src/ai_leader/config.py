@@ -70,14 +70,19 @@ MODEL_PALETTE: dict[str, str] = {
 
 
 def setup_api_key() -> str:
-    """Return a Nebius API key from the environment, prompting interactively as fallback."""
+    """Return a Nebius API key from the environment, prompting interactively as fallback.
+
+    Uses ``getpass`` so the key is never echoed to the notebook output.
+    """
     import os
+    from getpass import getpass
 
     api_key = os.getenv("NEBIUS_API_KEY") or os.getenv("OPENAI_API_KEY") or ""
     if not api_key:
-        api_key = input("Paste Nebius API key (or set env): ").strip()
+        api_key = getpass("Paste Nebius API key: ").strip()
     if api_key:
         os.environ["NEBIUS_API_KEY"] = api_key
+        print(f"API key configured (***{api_key[-4:]})")
     return api_key
 
 
