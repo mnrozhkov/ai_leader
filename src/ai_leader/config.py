@@ -14,7 +14,7 @@ TOKENFACTORY_US_CENTRAL1_URL = "https://api.tokenfactory.us-central1.nebius.com/
 # Per-million-token USD pricing (input / output). Same API host for every entry unless ``base_url``
 # is set on a row (advanced). Verified model IDs share TOKENFACTORY_BASE_URL above.
 MODEL_REGISTRY: dict[str, dict[str, float | str]] = {
-    "deepseek-ai/DeepSeek-V3.2": {
+    "deepseek-ai/DeepSeek-V4-Pro": {
         "input": 0.30,
         "output": 0.45,
     },
@@ -22,11 +22,11 @@ MODEL_REGISTRY: dict[str, dict[str, float | str]] = {
         "input": 0.15,
         "output": 0.60,
     },
-    "Qwen/Qwen3.5-397B-A17B-fast": {
+    "Qwen/Qwen3.5-397B-A17B": {
         "input": 0.60,
         "output": 3.60,
     },
-    "zai-org/GLM-5": {
+    "zai-org/GLM-5.2": {
         "input": 1.00,
         "output": 3.20,
     },
@@ -68,10 +68,23 @@ MODEL_PALETTE: dict[str, str] = {
     m: DEFAULT_COLORS[i % len(DEFAULT_COLORS)] for i, m in enumerate(MODELS)
 }
 
+
+def setup_api_key() -> str:
+    """Return a Nebius API key from the environment, prompting interactively as fallback."""
+    import os
+
+    api_key = os.getenv("NEBIUS_API_KEY") or os.getenv("OPENAI_API_KEY") or ""
+    if not api_key:
+        api_key = input("Paste Nebius API key (or set env): ").strip()
+    if api_key:
+        os.environ["NEBIUS_API_KEY"] = api_key
+    return api_key
+
+
 H2_MISROUTE_MAX: float = 0.10
 DEFAULT_MONTHLY_MESSAGES: int = 20_000
 DEFAULT_MAX_CONCURRENCY: int = 5
-DEFAULT_TEMPERATURE: float = 0.2
+DEFAULT_TEMPERATURE: float = 0.1
 
 
 class RunSettings(BaseModel):

@@ -14,9 +14,11 @@ from .config import MODEL_PALETTE, MODEL_REGISTRY
 from .decision import DecisionSummary
 
 _DISPLAY_DECIMALS = 3
+_HIGH_PRECISION_COLUMNS = frozenset({"cost_per_message_usd"})
+_HIGH_PRECISION_DECIMALS = 6
 
 
-def _display_round(value: Any) -> Any:
+def _display_round(value: Any, *, decimals: int = _DISPLAY_DECIMALS) -> Any:
     """Round numerics for tables and plot labels (see ``_DISPLAY_DECIMALS``)."""
     if value is None:
         return None
@@ -25,16 +27,21 @@ def _display_round(value: Any) -> Any:
     if isinstance(value, bool):
         return value
     if isinstance(value, int | float):
-        return round(float(value), _DISPLAY_DECIMALS)
+        return round(float(value), decimals)
     return value
 
 
 def round_numeric_frame(df: pd.DataFrame, *, decimals: int = _DISPLAY_DECIMALS) -> pd.DataFrame:
-    """Return a copy with numeric columns rounded (string columns unchanged)."""
+    """Return a copy with numeric columns rounded (string columns unchanged).
+
+    Columns in ``_HIGH_PRECISION_COLUMNS`` (e.g. ``cost_per_message_usd``) use
+    extra decimal places so tiny values are not rounded to zero.
+    """
     out = df.copy()
     for col in out.columns:
         if pd.api.types.is_numeric_dtype(out[col].dtype):
-            out[col] = pd.to_numeric(out[col], errors="coerce").round(decimals)
+            col_decimals = _HIGH_PRECISION_DECIMALS if col in _HIGH_PRECISION_COLUMNS else decimals
+            out[col] = pd.to_numeric(out[col], errors="coerce").round(col_decimals)
     return out
 
 
@@ -407,13 +414,21 @@ def display_run_comparison_table(
         "p95_latency_ms": new_latency.get("p95_latency_ms"),
     }
 
+    def _round_metric(metric_name: str, value: Any) -> Any:
+        dec = (
+            _HIGH_PRECISION_DECIMALS
+            if metric_name in _HIGH_PRECISION_COLUMNS
+            else _DISPLAY_DECIMALS
+        )
+        return _display_round(value, decimals=dec)
+
     baseline_series = pd.Series(
-        [_display_round(baseline_values[m]) for m in metric_rows],
+        [_round_metric(m, baseline_values[m]) for m in metric_rows],
         index=metric_rows,
         dtype="object",
     )
     new_series = pd.Series(
-        [_display_round(new_values[m]) for m in metric_rows],
+        [_round_metric(m, new_values[m]) for m in metric_rows],
         index=metric_rows,
         dtype="object",
     )
@@ -426,7 +441,10 @@ def display_run_comparison_table(
         {
             "baseline": baseline_series,
             new_label: new_series,
-            "delta_vs_baseline": delta_series.map(_display_round),
+            "delta_vs_baseline": pd.Series(
+                {m: _round_metric(m, delta_series.get(m)) for m in metric_rows},
+                dtype="object",
+            ),
         },
         index=metric_rows,
     )
@@ -1006,7 +1024,7 @@ def display_cost_breakdown(
     *,
     model: str,
     cost_metrics: dict[str, Any],
-    monthly_messages: int,
+    monthly_messages: int = 20_000,
 ) -> None:
     from IPython.display import display
 
@@ -1021,7 +1039,7 @@ def display_cost_breakdown(
 def display_cost_projection(
     *,
     cost_metrics: dict[str, Any],
-    monthly_messages: int,
+    monthly_messages: int = 20_000,
 ) -> None:
     from IPython.display import display
 
