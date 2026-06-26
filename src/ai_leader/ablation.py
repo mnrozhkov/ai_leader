@@ -75,9 +75,9 @@ async def run_few_shot_ablation_async(
     few_shot_counts: list[int],
     best_model: str,
     client: Any,
-    max_concurrency: int,
-    system_prompt: str,
-    temperature: float,
+    max_concurrency: int = 5,
+    system_prompt: str = "",
+    temperature: float = 0.1,
     show_progress: bool = True,
 ) -> tuple[pd.DataFrame, dict[int, pd.DataFrame]]:
     """Run the ablation for multiple `n_shot` values on the same eval slice."""
