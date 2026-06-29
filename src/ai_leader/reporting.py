@@ -899,10 +899,11 @@ def safety_metrics_summary_table(safety_metrics: dict[str, float]) -> pd.DataFra
     return pd.DataFrame(
         [
             {
-                "Auto-route coverage": _display_round(safety_metrics["auto_route_coverage"]),
+                "Rate of High confident predictions": _display_round(
+                    safety_metrics["auto_route_coverage"]
+                ),
                 "Auto-route precision": _display_round(safety_metrics["auto_route_precision"]),
                 "Unsafe auto-route rate": _display_round(safety_metrics["unsafe_auto_route_rate"]),
-                "Manual review rate": _display_round(safety_metrics["manual_review_rate"]),
             },
         ],
     )
@@ -1033,7 +1034,6 @@ def display_cost_breakdown(
             model=model, cost_metrics=cost_metrics, monthly_messages=monthly_messages
         )
     )
-    display(token_economics_table(model=model, cost_metrics=cost_metrics))
 
 
 def display_cost_projection(
