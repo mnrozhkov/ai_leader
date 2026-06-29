@@ -156,8 +156,14 @@ def plot_confusion_matrix_relative_and_counts(
     plt.close(fig)
 
 
-def display_evaluation_results(*, eval_results: _HasQualityMetrics) -> None:
-    """Print core routing metrics and show confusion matrices (relative + counts)."""
+def display_evaluation_results(
+    *, eval_results: _HasQualityMetrics, show_category_confusion: bool = True
+) -> None:
+    """Print core routing metrics and show confusion matrices (relative + counts).
+
+    Set ``show_category_confusion=False`` to render only the department confusion
+    matrix (useful when a section focuses on department-level routing quality).
+    """
     qm = eval_results.quality_metrics
     n = int(qm.get("row_count") or 0)
     row = {k: _display_round(qm.get(k)) for k in _EVALUATION_METRIC_KEYS}
@@ -165,7 +171,7 @@ def display_evaluation_results(*, eval_results: _HasQualityMetrics) -> None:
     print(metrics_series.to_string())
 
     cat = qm.get("confusion_category")
-    if isinstance(cat, dict) and "matrix" in cat and "labels" in cat:
+    if show_category_confusion and isinstance(cat, dict) and "matrix" in cat and "labels" in cat:
         plot_confusion_matrix_relative_and_counts(
             cast(list[list[int]], cat["matrix"]),
             cast(list[str], cat["labels"]),
@@ -234,9 +240,16 @@ def display_evaluation_with_department_mistakes(
     eval_results: _HasQualityAndPredictions,
     eval_df: pd.DataFrame,
     max_rows: int = 10,
+    show_category_confusion: bool = True,
 ) -> pd.DataFrame:
-    """Display evaluation charts and return a compact department mistake table."""
-    display_evaluation_results(eval_results=eval_results)
+    """Display evaluation charts and return a compact department mistake table.
+
+    Set ``show_category_confusion=False`` to focus on the department confusion
+    matrix only and skip the category confusion plot.
+    """
+    display_evaluation_results(
+        eval_results=eval_results, show_category_confusion=show_category_confusion
+    )
     return department_mistakes_table(
         eval_df=eval_df,
         predictions=eval_results.predictions.copy(),
