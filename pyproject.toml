@@ -1,6 +1,6 @@
 [project]
 name = "ai-leader"
-version = "0.1.0"
+version = "0.2.0"
 description = "Materials and exercises for the AI Leader course"
 readme = "README.md"
 requires-python = ">=3.12"
