@@ -1034,7 +1034,6 @@ def display_cost_breakdown(
             model=model, cost_metrics=cost_metrics, monthly_messages=monthly_messages
         )
     )
-    display(token_economics_table(model=model, cost_metrics=cost_metrics))
 
 
 def display_cost_projection(
