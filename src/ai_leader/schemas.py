@@ -26,13 +26,7 @@ class SupportTicketExtraction(BaseModel):
         validation_alias=AliasChoices("Routing to Department", "[Agent] Routing to Department"),
         serialization_alias="[Agent] Routing to Department",
     )
-    agent_initial_response: str = Field(
-        description="A professional first response to the customer.",
-        validation_alias=AliasChoices("[Agent] Initial Response", "agent_initial_response"),
-        serialization_alias="[Agent] Initial Response",
-    )
-    confidence: ConfidenceLevel | None = Field(
-        default=None,
+    confidence: ConfidenceLevel = Field(
         description="Confidence for the routing decision.",
         validation_alias=AliasChoices("Confidence", "confidence"),
         serialization_alias="Confidence",

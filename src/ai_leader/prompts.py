@@ -11,7 +11,6 @@ DEFAULT_SYSTEM_PROMPT = """You are a support routing assistant.
 Return a JSON object with:
 - Category
 - Routing to Department
-- [Agent] Initial Response
 - Confidence (High, Medium, Low)
 Follow the schema exactly and do not add extra keys.
 """.strip()
@@ -48,7 +47,6 @@ non-order-specific questions
 Return a JSON object with exactly these keys:
 - Category
 - Routing to Department
-- [Agent] Initial Response
 - Confidence (High, Medium, Low)
 
 Do not add extra keys.
@@ -68,10 +66,6 @@ def build_user_prompt(
             output: dict[str, object] = {
                 "Category": ex["Category"],
                 "Routing to Department": ex["Routing to Department"],
-                "[Agent] Initial Response": ex.get(
-                    "[Agent] Initial Response",
-                    ex.get("[Human] Initial Response", ""),
-                ),
             }
             if "Confidence" in ex and ex["Confidence"]:
                 output["Confidence"] = ex["Confidence"]
@@ -82,7 +76,7 @@ def build_user_prompt(
                 f"  Order History: {ex.get('Order History')}\n"
                 f"Output:\n{json.dumps(output, ensure_ascii=False)}"
             )
-    parts.append("### New case — classify and respond ###")
+    parts.append("### New case — classify and route ###")
     parts.append(f"Request Text: {request_text}")
     parts.append(f"Submission Channel: {submission_channel}")
     parts.append(f"Order History: {order_history if order_history is not None else 'null'}")

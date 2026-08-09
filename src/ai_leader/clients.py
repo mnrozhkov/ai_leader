@@ -276,11 +276,9 @@ class FakeClient:
     ) -> tuple[str, dict[str, int]]:
         category = row.get("Category", self.default_category)
         department = row.get("Routing to Department", self.default_department)
-        response_text = row.get("[Human] Initial Response", "Thanks for reaching out.")
         payload = {
             "Category": category,
             "Routing to Department": department,
-            "[Agent] Initial Response": response_text,
             "Confidence": row.get("Confidence", self.confidence),
         }
         usage = {"prompt_tokens": 10, "completion_tokens": 20}
